@@ -1,0 +1,242 @@
+# Private Notes Web App with C plus plus Backend
+
+This project demonstrates a complete full stack application using C plus plus for the backend API, SQLite as the database, and a simple HTML CSS JavaScript frontend.
+
+## Technologies used
+
+- C plus plus 17 for backend application logic
+- cpp-httplib for HTTP server and API routing
+- nlohmann json for JSON parsing and response formatting
+- SQLite3 for persistent data storage
+- CommonCrypto SHA256 for password hashing on macOS
+- HTML, CSS, and vanilla JavaScript for the web interface
+- CMake for cross platform build configuration
+
+The app supports:
+- User registration
+- User login with secure password hashing
+- Session token authentication
+- Saving private notes for each user
+- Retrieving only the notes that belong to the logged in user
+
+## Why this project is useful
+
+I built this project to show a practical multi user system where private data is protected by authentication.
+
+I kept the UI simple and beginner friendly, while still using important backend security ideas:
+- Salted password hashing with many SHA256 rounds
+- Constant time hash comparison
+- Random session tokens
+- Token expiration
+- SQL prepared statements to prevent SQL injection
+
+## Project structure
+
+- `CMakeLists.txt` build configuration
+- `src/main.cpp` HTTP server and API routes
+- `src/database.hpp` database interface
+- `src/database.cpp` SQLite implementation
+- `src/auth.hpp` authentication interface
+- `src/auth.cpp` authentication and password hashing logic
+- `web/index.html` frontend page
+- `web/styles.css` frontend styles
+- `web/app.js` frontend behavior
+- `.gitignore` ignored files
+
+## Requirements
+
+On macOS:
+- CMake 3.20 or newer
+- A C plus plus compiler with C plus plus 17 support
+- SQLite development library
+- Internet access for first build to download header dependencies
+
+You can install build tools with Homebrew if needed:
+
+```bash
+brew install cmake
+```
+
+## Build and run
+
+From the project root:
+
+```bash
+cmake -S . -B build
+cmake --build build
+./build/private_data_app
+```
+
+When server starts, it listens at:
+- http://127.0.0.1:8080
+
+Open this URL in your browser:
+- http://127.0.0.1:8080
+
+## Beginner walkthrough
+
+1. Register a user
+- Enter a username like `alice_01`
+- Enter a password with at least 8 characters
+- Click Register
+
+2. Login
+- Use the same username and password
+- Click Login
+- The app stores your session token in browser memory
+
+3. Add private notes
+- Write a note
+- Click Save Note
+- Click Refresh Notes to fetch your notes from database
+
+4. Logout
+- Click Logout
+- You can no longer access note endpoints with that token
+
+## API reference
+
+### Health check
+
+- Method: `GET`
+- Path: `/api/health`
+- Success response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Register
+
+- Method: `POST`
+- Path: `/api/register`
+- Request body:
+
+```json
+{
+  "username": "alice_01",
+  "password": "secret123"
+}
+```
+
+- Success response status: `201`
+
+### Login
+
+- Method: `POST`
+- Path: `/api/login`
+- Request body:
+
+```json
+{
+  "username": "alice_01",
+  "password": "secret123"
+}
+```
+
+- Success response status: `200`
+- Success response body includes token:
+
+```json
+{
+  "token": "long_random_token"
+}
+```
+
+### Add note
+
+- Method: `POST`
+- Path: `/api/me/notes`
+- Header: `Authorization: Bearer <token>`
+- Request body:
+
+```json
+{
+  "content": "My private note"
+}
+```
+
+- Success response status: `201`
+
+### Get my notes
+
+- Method: `GET`
+- Path: `/api/me/notes`
+- Header: `Authorization: Bearer <token>`
+
+- Success response status: `200`
+- Response example:
+
+```json
+{
+  "notes": [
+    {
+      "id": 1,
+      "content": "My private note",
+      "created_at": "2026-07-14 12:00:00"
+    }
+  ]
+}
+```
+
+### Logout
+
+- Method: `POST`
+- Path: `/api/logout`
+- Header: `Authorization: Bearer <token>`
+
+- Success response status: `200`
+
+## Manual curl testing
+
+Run server in one terminal, then in another terminal:
+
+Register:
+
+```bash
+curl -s -X POST http://127.0.0.1:8080/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice_01","password":"secret123"}'
+```
+
+Login:
+
+```bash
+TOKEN=$(curl -s -X POST http://127.0.0.1:8080/api/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"alice_01","password":"secret123"}' | jq -r .token)
+
+echo "$TOKEN"
+```
+
+Add note:
+
+```bash
+curl -s -X POST http://127.0.0.1:8080/api/me/notes \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"content":"hello from alice"}'
+```
+
+Read notes:
+
+```bash
+curl -s http://127.0.0.1:8080/api/me/notes \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Logout:
+
+```bash
+curl -s -X POST http://127.0.0.1:8080/api/logout \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## Notes for beginners
+
+- Data is stored in `app.db` in project root.
+- If you want a clean database, stop server and delete `app.db`.
+- This project is intentionally small so you can read every file.
+- For production use, you should add HTTPS, CSRF protection, stronger password policy, and refresh token strategy.

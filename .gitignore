@@ -1,0 +1,17 @@
+# Build output
+build/
+
+# Database files
+app.db
+app.db-shm
+app.db-wal
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log

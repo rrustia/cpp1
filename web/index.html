@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Private Notes App</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Private Notes App</h1>
+      <p class="subtitle">Simple multi user storage with C plus plus backend API.</p>
+
+      <section class="card">
+        <h2>Authentication</h2>
+        <div class="row">
+          <label for="username">Username</label>
+          <input id="username" type="text" placeholder="alice_01" />
+        </div>
+        <div class="row">
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="At least 8 characters" />
+        </div>
+        <div class="button-row">
+          <button id="registerBtn">Register</button>
+          <button id="loginBtn">Login</button>
+          <button id="logoutBtn">Logout</button>
+        </div>
+        <p id="authStatus" class="status"></p>
+      </section>
+
+      <section class="card">
+        <h2>Your Notes</h2>
+        <div class="row">
+          <label for="noteContent">New note</label>
+          <textarea id="noteContent" rows="3" placeholder="Write your private note"></textarea>
+        </div>
+        <div class="button-row">
+          <button id="saveNoteBtn">Save Note</button>
+          <button id="refreshBtn">Refresh Notes</button>
+        </div>
+        <ul id="notesList"></ul>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

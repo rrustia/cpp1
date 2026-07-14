@@ -1,0 +1,110 @@
+:root {
+  --bg: #f2f5f9;
+  --card: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --accent: #1d4ed8;
+  --accent-hover: #1e40af;
+  --border: #d1d5db;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at top left, #dbeafe, var(--bg));
+}
+
+.container {
+  max-width: 760px;
+  margin: 30px auto;
+  padding: 16px;
+}
+
+h1 {
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 14px 0;
+  box-shadow: 0 8px 24px rgba(2, 6, 23, 0.08);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+label {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+input,
+textarea,
+button {
+  font: inherit;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--accent-hover);
+}
+
+.status {
+  min-height: 22px;
+  color: #0f766e;
+}
+
+#notesList {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+
+#notesList li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+@media (max-width: 600px) {
+  .container {
+    margin: 16px auto;
+    padding: 12px;
+  }
+}
