@@ -7,11 +7,17 @@ const noteContentInput = document.getElementById("noteContent");
 const notesList = document.getElementById("notesList");
 
 function setStatus(message, isError = false) {
+  // Updates the status message shown in the authentication panel.
+  // Input: message is the text to display, and isError switches the text color to an error state when true.
+  // Output: The status area on the page is updated in place.
   authStatus.textContent = message;
   authStatus.style.color = isError ? "#b91c1c" : "#0f766e";
 }
 
 async function requestJson(url, method, payload, token = "") {
+  // Sends a JSON request to the backend and returns the parsed JSON response.
+  // Input: url is the endpoint, method is the HTTP verb, payload is optional data, and token is an optional bearer token.
+  // Output: Resolves with parsed JSON on success, or throws an Error when the request fails.
   const headers = {
     "Content-Type": "application/json",
   };
@@ -35,18 +41,24 @@ async function requestJson(url, method, payload, token = "") {
 }
 
 async function registerUser() {
+  // Reads the form values and sends a registration request for a new account.
+  // Input: Uses the current username and password fields from the page.
+  // Output: Shows a success or error message in the status area.
   try {
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
 
     await requestJson("/api/register", "POST", { username, password });
-    setStatus("User registered. You can now log in.");
+    setStatus("User registered. The account is ready for login.");
   } catch (error) {
     setStatus(error.message, true);
   }
 }
 
 async function loginUser() {
+  // Signs a user in, stores the returned token in memory, and refreshes the notes list.
+  // Input: Uses the current username and password fields from the page.
+  // Output: Saves authToken on success and updates the visible status and notes.
   try {
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
@@ -61,9 +73,12 @@ async function loginUser() {
 }
 
 async function logoutUser() {
+  // Ends the current session on the server and clears local note state.
+  // Input: Uses the in-memory authToken when one is available.
+  // Output: Clears authToken and the rendered notes list after a successful logout.
   try {
     if (!authToken) {
-      setStatus("You are already logged out.");
+      setStatus("The session is already logged out.");
       return;
     }
 
@@ -77,6 +92,9 @@ async function logoutUser() {
 }
 
 async function saveNote() {
+  // Sends the current note text to the backend for the logged-in user.
+  // Input: Uses authToken and the note content field from the page.
+  // Output: Clears the note field on success and refreshes the list of saved notes.
   try {
     if (!authToken) {
       setStatus("Please log in first.", true);
@@ -94,6 +112,9 @@ async function saveNote() {
 }
 
 async function loadNotes() {
+  // Loads notes for the active session and redraws the list in the page.
+  // Input: Uses authToken to request notes for the current logged-in user.
+  // Output: Replaces the visible notes list with the latest server data.
   try {
     if (!authToken) {
       notesList.innerHTML = "";

@@ -11,15 +11,20 @@ using json = nlohmann::json;
 namespace {
 
 void json_response(httplib::Response& res, int status, const json& payload) {
-  // I return all API replies as JSON so the frontend has one predictable format to read.
-  // I also pretty print with indentation because this is a learning project and easier to inspect.
+  // Sends a JSON response with the given HTTP status code and body.
+  // All routes use this helper so the frontend always receives the same format.
+  // Pretty printing is used to make responses easier to read during development.
+  // Input: res is the response object to populate, status is the HTTP status code, payload is the JSON to send.
+  // Output: The response object is updated in place with the content type and formatted body.
   res.status = status;
   res.set_content(payload.dump(2), "application/json");
 }
 
 bool parse_json_body(const httplib::Request& req, json& body, std::string& error_message) {
   try {
-    // I parse the request body here once per route to keep route logic short and readable.
+    // Parses the request body as JSON so each route does not have to handle parsing on its own.
+    // Input: req is the incoming request, body is filled with the parsed result. error_message is filled on failure.
+    // Output: Returns true if the body was valid JSON.
     body = json::parse(req.body);
     return true;
   } catch (const std::exception& ex) {
@@ -29,8 +34,10 @@ bool parse_json_body(const httplib::Request& req, json& body, std::string& error
 }
 
 std::string read_bearer_token(const httplib::Request& req) {
-  // I expect clients to send a header like Authorization: Bearer <token>.
-  // If the prefix does not match, I return an empty string and the route can reject the request.
+  // Extracts the bearer token value from the Authorization header of an incoming request.
+  // If the header is absent or does not follow the Bearer format, an empty string is returned.
+  // Input: req is the incoming HTTP request.
+  // Output: Returns the token string, or an empty string if no valid bearer token was present.
   const auto auth_header = req.get_header_value("Authorization");
   const std::string prefix = "Bearer ";
   if (auth_header.rfind(prefix, 0) == 0) {
@@ -42,10 +49,13 @@ std::string read_bearer_token(const httplib::Request& req) {
 }  // namespace
 
 int main() {
+  // Starts the application by preparing the database, wiring the routes, and launching the HTTP server.
+  // Input: No command line input is used.
+  // Output: Returns 0 on a clean shutdown, or 1 if startup fails.
   Database db;
   std::string error;
 
-  // I open and migrate the database first so the server never starts in a broken state.
+  // Opens and migrates the database before anything else so the server never starts with a missing or outdated schema.
   if (!db.open("app.db", error)) {
     std::cerr << "Failed to open database: " << error << "\n";
     return 1;
@@ -61,7 +71,9 @@ int main() {
   server.set_mount_point("/", "./web");
 
   server.Post("/api/register", [&](const httplib::Request& req, httplib::Response& res) {
-    // I keep registration explicit so beginners can trace every step from request to database write.
+    // Handles new account creation by reading username and password from the request body and passing them to the auth service.
+    // Input: JSON body with "username" and "password" fields.
+    // Output: 201 with a success message, or 400 with an error message.
     json body;
     if (!parse_json_body(req, body, error)) {
       json_response(res, 400, {{"error", error}});
@@ -81,7 +93,9 @@ int main() {
   });
 
   server.Post("/api/login", [&](const httplib::Request& req, httplib::Response& res) {
-    // I issue a session token after login instead of reusing passwords in future requests.
+    // Handles login by verifying credentials and returning a session token the client uses for future requests.
+    // Input: JSON body with "username" and "password" fields.
+    // Output: 200 with a token on success, or 401 with an error message.
     json body;
     if (!parse_json_body(req, body, error)) {
       json_response(res, 400, {{"error", error}});
@@ -102,6 +116,9 @@ int main() {
   });
 
   server.Post("/api/logout", [&](const httplib::Request& req, httplib::Response& res) {
+    // Logs the current user out by removing the session linked to the bearer token.
+    // Input: Authorization header with a bearer token.
+    // Output: 200 with a confirmation message, or 401 or 500 on failure.
     const std::string token = read_bearer_token(req);
     if (token.empty()) {
       json_response(res, 401, {{"error", "Missing bearer token"}});
@@ -118,8 +135,10 @@ int main() {
   });
 
   server.Get("/api/me/notes", [&](const httplib::Request& req, httplib::Response& res) {
-    // I authenticate first, then query by user id.
-    // This is the key rule that keeps each user limited to only their own data.
+    // Returns all notes belonging to the authenticated user.
+    // The token is verified first, then notes are fetched using only that user's id so no other user's data can come through.
+    // Input: Authorization header with a valid bearer token.
+    // Output: 200 with a notes array, or 401 if the token is invalid.
     const std::string token = read_bearer_token(req);
 
     int user_id = 0;
@@ -149,7 +168,10 @@ int main() {
   });
 
   server.Post("/api/me/notes", [&](const httplib::Request& req, httplib::Response& res) {
-    // I reuse the same token check for write operations so read and write stay consistent.
+    // Saves a new note for the authenticated user.
+    // The same token check used for reading notes is applied here so the access rules stay consistent.
+    // Input: Authorization header with a valid bearer token, and a JSON body with a "content" field.
+    // Output: 201 with a success message, or 400 or 401 on failure.
     const std::string token = read_bearer_token(req);
 
     int user_id = 0;
@@ -181,7 +203,9 @@ int main() {
   });
 
   server.Get("/api/health", [&](const httplib::Request&, httplib::Response& res) {
-    // I keep this endpoint tiny because it is useful for automated health checks.
+    // A minimal endpoint that confirms the server is running and able to respond.
+    // Input: No body or headers required.
+    // Output: 200 with a status field set to "ok".
     json_response(res, 200, {{"status", "ok"}});
   });
 

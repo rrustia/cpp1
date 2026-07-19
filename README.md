@@ -1,6 +1,10 @@
 # Private Notes Web App with C plus plus Backend
 
-This project demonstrates a complete full stack application using C plus plus for the backend API, SQLite as the database, and a simple HTML CSS JavaScript frontend.
+<!-- Purpose: This document explains the private notes application and works as a simple reference for building, running, and understanding the project. -->
+<!-- Input: A reader uses a macOS machine, a terminal, and the listed build tools. -->
+<!-- Output: By the end, a reader can build the server, start the app, register an account, save notes, and understand the main API flow. -->
+
+The project shows a full stack application with a C plus plus backend API, SQLite storage, and a small HTML CSS JavaScript frontend.
 
 ## Technologies used
 
@@ -21,9 +25,9 @@ The app supports:
 
 ## Why this project is useful
 
-I built this project to show a practical multi user system where private data is protected by authentication.
+The project demonstrates a practical multi user system where private data stays protected behind authentication.
 
-I kept the UI simple and beginner friendly, while still using important backend security ideas:
+The interface stays simple and beginner friendly while still showing important backend security ideas:
 - Salted password hashing with many SHA256 rounds
 - Constant time hash comparison
 - Random session tokens
@@ -51,7 +55,7 @@ On macOS:
 - SQLite development library
 - Internet access for first build to download header dependencies
 
-You can install build tools with Homebrew if needed:
+A reader can install build tools with Homebrew if needed:
 
 ```bash
 brew install cmake
@@ -67,10 +71,10 @@ cmake --build build
 ./build/private_data_app
 ```
 
-When server starts, it listens at:
+When the server starts, it listens at:
 - http://127.0.0.1:8080
 
-Open this URL in your browser:
+A browser can then open:
 - http://127.0.0.1:8080
 
 ## Beginner walkthrough
@@ -83,16 +87,16 @@ Open this URL in your browser:
 2. Login
 - Use the same username and password
 - Click Login
-- The app stores your session token in browser memory
+- The app stores the session token in browser memory
 
 3. Add private notes
 - Write a note
 - Click Save Note
-- Click Refresh Notes to fetch your notes from database
+- Click Refresh Notes to fetch notes from the database
 
 4. Logout
 - Click Logout
-- You can no longer access note endpoints with that token
+- The token can no longer access note endpoints after logout
 
 ## API reference
 
@@ -154,13 +158,13 @@ Open this URL in your browser:
 
 ```json
 {
-  "content": "My private note"
+  "content": "A private note"
 }
 ```
 
 - Success response status: `201`
 
-### Get my notes
+### Get notes for the current user
 
 - Method: `GET`
 - Path: `/api/me/notes`
@@ -174,7 +178,7 @@ Open this URL in your browser:
   "notes": [
     {
       "id": 1,
-      "content": "My private note",
+      "content": "A private note",
       "created_at": "2026-07-14 12:00:00"
     }
   ]
@@ -191,7 +195,7 @@ Open this URL in your browser:
 
 ## Manual curl testing
 
-Run server in one terminal, then in another terminal:
+Run the server in one terminal, then use another terminal for the requests below:
 
 Register:
 
@@ -236,7 +240,7 @@ curl -s -X POST http://127.0.0.1:8080/api/logout \
 
 ## Notes for beginners
 
-- Data is stored in `app.db` in project root.
-- If you want a clean database, stop server and delete `app.db`.
-- This project is intentionally small so you can read every file.
-- For production use, you should add HTTPS, CSRF protection, stronger password policy, and refresh token strategy.
+- Data is stored in `app.db` in the project root.
+- A clean database can be created by stopping the server and deleting `app.db`.
+- The project stays intentionally small so a reader can inspect every file.
+- A production version should add HTTPS, CSRF protection, a stronger password policy, and a refresh token strategy.

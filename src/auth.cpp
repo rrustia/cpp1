@@ -12,7 +12,9 @@
 namespace {
 
 std::string to_hex(const std::vector<unsigned char>& bytes) {
-  // I convert raw bytes to a text form so I can safely store hash and salt values in SQLite.
+  // Converts raw bytes into a lowercase hex string so hash and salt values can be safely stored as text.
+  // Input: bytes is the raw byte data to encode.
+  // Output: Returns a hex string that is exactly twice the length of the input.
   static const char* hex = "0123456789abcdef";
   std::string out;
   out.reserve(bytes.size() * 2);
@@ -24,15 +26,19 @@ std::string to_hex(const std::vector<unsigned char>& bytes) {
 }
 
 std::vector<unsigned char> sha256_bytes(const std::string& input) {
-  // I keep hashing in one helper so password code stays clean and easy to follow.
+  // Runs a single SHA256 hash on an input string and returns the raw digest bytes.
+  // Input: input is the string to hash.
+  // Output: Returns a 32-byte vector with the SHA256 result.
   std::vector<unsigned char> digest(CC_SHA256_DIGEST_LENGTH);
   CC_SHA256(input.data(), static_cast<CC_LONG>(input.size()), digest.data());
   return digest;
 }
 
 bool constant_time_equals(const std::string& a, const std::string& b) {
-  // I compare hashes in constant time so timing differences leak less information.
-  // This pattern is safer than returning immediately when the first mismatch appears.
+  // Compares two strings without stopping early on a mismatch, which reduces timing-based information leaks.
+  // Early returns could let an attacker guess hash values from how fast the server responds.
+  // Input: a and b are the two strings to compare.
+  // Output: Returns true only if both strings are identical in length and content.
   if (a.size() != b.size()) {
     return false;
   }
@@ -47,7 +53,9 @@ bool constant_time_equals(const std::string& a, const std::string& b) {
 }  // namespace
 
 bool AuthService::validate_username(const std::string& username, std::string& error_message) {
-  // I keep username rules simple so beginners can understand and adjust them.
+  // Checks that a username is between 3 and 32 characters and contains only letters, numbers, or underscores.
+  // Input: username is the value to check, error_message is filled with a reason if the check fails.
+  // Output: Returns true if the username passes all rules.
   if (username.size() < 3 || username.size() > 32) {
     error_message = "Username must be between 3 and 32 characters";
     return false;
@@ -64,7 +72,9 @@ bool AuthService::validate_username(const std::string& username, std::string& er
 }
 
 bool AuthService::validate_password(const std::string& password, std::string& error_message) {
-  // I require a minimum length for basic strength without making this demo complex.
+  // Checks that a password is at least 8 characters long.
+  // Input: password is the value to check, error_message is filled if it is too short.
+  // Output: Returns true if the password meets the minimum length.
   if (password.size() < 8) {
     error_message = "Password must be at least 8 characters";
     return false;
@@ -73,7 +83,9 @@ bool AuthService::validate_password(const std::string& password, std::string& er
 }
 
 std::string AuthService::generate_hex_random(std::size_t byte_count) {
-  // I prefer /dev/urandom on macOS because it is cryptographically secure.
+  // Generates a random byte sequence using the system's cryptographically secure random source.
+  // Input: byte_count is how many random bytes to produce.
+  // Output: Returns a hex string of length byte_count times two.
   std::vector<unsigned char> bytes(byte_count);
   std::ifstream random_stream("/dev/urandom", std::ios::binary);
   if (random_stream.good()) {
@@ -83,7 +95,7 @@ std::string AuthService::generate_hex_random(std::size_t byte_count) {
     }
   }
 
-  // I still provide a fallback so the app does not crash if random source is unavailable.
+  // Falls back to std::random_device if the system random source was not available.
   std::random_device rd;
   for (std::size_t i = 0; i < byte_count; ++i) {
     bytes[i] = static_cast<unsigned char>(rd() & 0xFF);
@@ -92,8 +104,11 @@ std::string AuthService::generate_hex_random(std::size_t byte_count) {
 }
 
 std::string AuthService::hash_password(const std::string& password, const std::string& salt_hex) {
-  // I run many SHA256 rounds so brute force is harder than a single hash.
-  // I use a deterministic algorithm here so login can recompute the same result later.
+  // Hashes a password by combining it with the salt and running many SHA256 rounds.
+  // Running many rounds makes brute force significantly slower than a single hash.
+  // The process is deterministic so the same password and salt always produce the same result.
+  // Input: password is the plain text, salt_hex is the hex-encoded salt for this user.
+  // Output: Returns the final hash as a hex string.
   std::string state = salt_hex + password;
   std::vector<unsigned char> digest = sha256_bytes(state);
 
@@ -110,7 +125,9 @@ bool AuthService::register_user(Database& db,
                                 const std::string& username,
                                 const std::string& password,
                                 std::string& error_message) {
-  // I validate inputs early so I never write invalid credentials to the database.
+  // Registers a new user by validating credentials, generating a random salt, hashing the password, and saving everything to the database.
+  // Input: db is the database connection, username and password are the new account details. error_message is filled on failure.
+  // Output: Returns true if the account was created successfully.
   if (!validate_username(username, error_message) ||
       !validate_password(password, error_message)) {
     return false;
@@ -127,8 +144,10 @@ bool AuthService::login(Database& db,
                         const std::string& password,
                         std::string& token,
                         std::string& error_message) {
-  // I read salt and expected hash from the user record.
-  // Then I hash the provided password again and compare both hashes.
+  // Logs a user in by loading their stored salt and hash, recomputing the hash from the given password, and comparing the two.
+  // On success a random session token is generated and stored in the database.
+  // Input: db is the database connection, username and password are the login credentials. token is filled on success. error_message is filled on failure.
+  // Output: Returns true if credentials matched and a session was saved.
   int user_id = 0;
   std::string salt_hex;
   std::string expected_hash_hex;
@@ -143,7 +162,7 @@ bool AuthService::login(Database& db,
   }
 
   token = generate_hex_random(32);
-  // I set a one day expiration so tokens are not valid forever.
+  // Sets a 24-hour expiry on the new session so tokens do not remain valid indefinitely.
   const auto now = std::chrono::system_clock::now();
   const auto expires = now + std::chrono::hours(24);
   const auto expires_unix =
@@ -160,7 +179,10 @@ bool AuthService::authenticate_token(Database& db,
                                      const std::string& token,
                                      int& user_id,
                                      std::string& error_message) {
-  // I treat an empty token as unauthorized immediately to avoid unnecessary database work.
+  // Checks that a token exists in the database and has not expired yet.
+  // An empty token is rejected straight away without touching the database.
+  // Input: db is the database connection, token is the bearer token to validate. user_id is filled on success. error_message is filled on failure.
+  // Output: Returns true if the token is valid and the session is still active.
   if (token.empty()) {
     error_message = "Missing token";
     return false;

@@ -7,7 +7,9 @@
 namespace {
 
 bool exec_sql(sqlite3* db, const char* sql, std::string& error_message) {
-  // I use this small helper for schema and cleanup statements that do not need parameters.
+  // A small helper runs simple SQL statements that do not need bound parameters, like schema creation or cleanup.
+  // Input: db is the open SQLite connection, sql is the statement string.
+  // Output: Returns true if the statement ran without error. Fills error_message on failure.
   char* raw_error = nullptr;
   const int rc = sqlite3_exec(db, sql, nullptr, nullptr, &raw_error);
   if (rc != SQLITE_OK) {
@@ -20,12 +22,20 @@ bool exec_sql(sqlite3* db, const char* sql, std::string& error_message) {
 
 }  // namespace
 
+// Starts with no active SQLite connection.
+// Input: No input is required.
+// Output: Creates a Database object with db_ set to nullptr.
 Database::Database() : db_(nullptr) {}
 
+// Shuts down the owned SQLite connection during object cleanup.
+// Input: No input is required.
+// Output: Ensures close() runs before the object is destroyed.
 Database::~Database() { close(); }
 
 bool Database::open(const std::string& db_path, std::string& error_message) {
-  // I open one persistent connection because this small app is single process.
+  // Opens a persistent SQLite connection that the app keeps open for its entire lifetime.
+  // Input: db_path is the file path to the database, error_message is filled on failure.
+  // Output: Returns true if the connection opened and foreign keys were enabled successfully.
   const int rc = sqlite3_open(db_path.c_str(), &db_);
   if (rc != SQLITE_OK) {
     error_message = sqlite3_errmsg(db_);
@@ -40,6 +50,9 @@ bool Database::open(const std::string& db_path, std::string& error_message) {
 }
 
 void Database::close() {
+  // Closes the current SQLite connection if one is open.
+  // Input: No input is required.
+  // Output: The internal database handle is reset to nullptr.
   if (db_ != nullptr) {
     sqlite3_close(db_);
     db_ = nullptr;
@@ -47,7 +60,10 @@ void Database::close() {
 }
 
 bool Database::migrate(std::string& error_message) {
-  // I keep schema creation idempotent so the app can restart safely.
+  // Creates the users, sessions, and notes tables if they do not already exist.
+  // Safe to call on every startup since every table uses IF NOT EXISTS.
+  // Input: error_message is filled with details if any statement fails.
+  // Output: Returns true if all tables are ready.
   const char* sql = R"SQL(
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,8 +97,9 @@ bool Database::create_user(const std::string& username,
                            const std::string& salt_hex,
                            const std::string& password_hash_hex,
                            std::string& error_message) {
-  // I use prepared statements to avoid SQL injection and improve safety.
-  // Every user value is bound as data, so input cannot break SQL structure.
+  // Inserts a new user record with a prepared statement so no value can be treated as SQL code.
+  // Input: username, salt_hex, and password_hash_hex are the credentials to save. error_message is filled on failure.
+  // Output: Returns true if the row was inserted successfully.
   const char* sql =
       "INSERT INTO users(username, salt_hex, password_hash_hex) VALUES (?, ?, ?);";
 
@@ -112,7 +129,9 @@ bool Database::get_user_auth_data(const std::string& username,
                                   std::string& salt_hex,
                                   std::string& password_hash_hex,
                                   std::string& error_message) {
-  // I return only the fields needed for login to keep data flow minimal.
+  // Looks up a user by username and returns only the fields needed to verify a login attempt.
+  // Input: username is the account name to find. user_id, salt_hex, and password_hash_hex are filled on success. error_message is filled on failure.
+  // Output: Returns true if the user was found.
   const char* sql =
       "SELECT id, salt_hex, password_hash_hex FROM users WHERE username = ? LIMIT 1;";
 
@@ -149,7 +168,10 @@ bool Database::save_session(const std::string& token,
                             int user_id,
                             long long expires_at,
                             std::string& error_message) {
-  // I keep session data in a table so token validation is stateless for the HTTP server.
+  // Saves a session token so the server can validate it on future requests.
+  // If a token with the same value already exists, its user and expiry are updated.
+  // Input: token is the session string, user_id ties it to an account, expires_at is the Unix expiry timestamp. error_message is filled on failure.
+  // Output: Returns true if the session was saved successfully.
   const char* sql =
       "INSERT INTO sessions(token, user_id, expires_at) VALUES (?, ?, ?) "
       "ON CONFLICT(token) DO UPDATE SET user_id = excluded.user_id, "
@@ -180,6 +202,9 @@ bool Database::get_session(const std::string& token,
                            int& user_id,
                            long long& expires_at,
                            std::string& error_message) {
+  // Looks up a session token and returns the associated user id and expiry time.
+  // Input: token is the bearer token to find. user_id and expires_at are filled on success. error_message is filled on failure.
+  // Output: Returns true if the session was found.
   const char* sql = "SELECT user_id, expires_at FROM sessions WHERE token = ? LIMIT 1;";
 
   sqlite3_stmt* stmt = nullptr;
@@ -209,6 +234,9 @@ bool Database::get_session(const std::string& token,
 }
 
 bool Database::delete_session(const std::string& token, std::string& error_message) {
+  // Removes a specific session from the database, effectively logging that user out.
+  // Input: token is the session to remove. error_message is filled on failure.
+  // Output: Returns true if the delete ran without error.
   const char* sql = "DELETE FROM sessions WHERE token = ?;";
 
   sqlite3_stmt* stmt = nullptr;
@@ -231,12 +259,17 @@ bool Database::delete_session(const std::string& token, std::string& error_messa
 }
 
 bool Database::delete_expired_sessions(std::string& error_message) {
+  // Removes all sessions whose expiry time has already passed, keeping the sessions table clean.
+  // Input: error_message is filled on failure.
+  // Output: Returns true if the cleanup ran without error.
   const char* sql = "DELETE FROM sessions WHERE expires_at < strftime('%s', 'now');";
   return exec_sql(db_, sql, error_message);
 }
 
 bool Database::add_note(int user_id, const std::string& content, std::string& error_message) {
-  // I always store notes with user_id so later queries can isolate records per user.
+  // Saves a new note and ties it to a specific user so only that user can retrieve it later.
+  // Input: user_id is the owner, content is the note text. error_message is filled on failure.
+  // Output: Returns true if the note was inserted successfully.
   const char* sql = "INSERT INTO notes(user_id, content) VALUES (?, ?);";
 
   sqlite3_stmt* stmt = nullptr;
@@ -262,8 +295,10 @@ bool Database::add_note(int user_id, const std::string& content, std::string& er
 bool Database::get_notes_for_user(int user_id,
                                   std::vector<Note>& notes,
                                   std::string& error_message) {
-  // I filter by user_id in SQL itself.
-  // This is safer than loading all notes and filtering in application code.
+  // Fetches all notes for a specific user, ordered newest first.
+  // Filtering is done in SQL to avoid loading data that does not belong to the requester.
+  // Input: user_id identifies whose notes to fetch. notes is filled with the results. error_message is filled on failure.
+  // Output: Returns true if the query ran successfully, even when the user has no notes.
   const char* sql =
       "SELECT id, content, created_at FROM notes WHERE user_id = ? ORDER BY id DESC;";
 
