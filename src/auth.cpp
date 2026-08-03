@@ -1,6 +1,11 @@
 #include "auth.hpp"
 
+#if defined(__APPLE__)
 #include <CommonCrypto/CommonDigest.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#include <bcrypt.h>
+#endif
 
 #include <chrono>
 #include <cctype>
@@ -29,9 +34,65 @@ std::vector<unsigned char> sha256_bytes(const std::string& input) {
   // Runs a single SHA256 hash on an input string and returns the raw digest bytes.
   // Input: input is the string to hash.
   // Output: Returns a 32-byte vector with the SHA256 result.
+#if defined(__APPLE__)
   std::vector<unsigned char> digest(CC_SHA256_DIGEST_LENGTH);
   CC_SHA256(input.data(), static_cast<CC_LONG>(input.size()), digest.data());
   return digest;
+#elif defined(_WIN32)
+  std::vector<unsigned char> digest(32);
+
+  BCRYPT_ALG_HANDLE algorithm = nullptr;
+  BCRYPT_HASH_HANDLE hash = nullptr;
+  DWORD object_size = 0;
+  DWORD bytes_written = 0;
+  std::vector<unsigned char> hash_object;
+
+  if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(
+          &algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0))) {
+    return {};
+  }
+
+  if (!BCRYPT_SUCCESS(BCryptGetProperty(
+          algorithm,
+          BCRYPT_OBJECT_LENGTH,
+          reinterpret_cast<PUCHAR>(&object_size),
+          static_cast<ULONG>(sizeof(object_size)),
+          &bytes_written,
+          0))) {
+    BCryptCloseAlgorithmProvider(algorithm, 0);
+    return {};
+  }
+
+  hash_object.resize(object_size);
+  if (!BCRYPT_SUCCESS(BCryptCreateHash(
+          algorithm,
+          &hash,
+          hash_object.data(),
+          object_size,
+          nullptr,
+          0,
+          0))) {
+    BCryptCloseAlgorithmProvider(algorithm, 0);
+    return {};
+  }
+
+  if (!BCRYPT_SUCCESS(BCryptHashData(
+          hash,
+          reinterpret_cast<PUCHAR>(const_cast<char*>(input.data())),
+          static_cast<ULONG>(input.size()),
+          0)) ||
+      !BCRYPT_SUCCESS(BCryptFinishHash(hash, digest.data(), static_cast<ULONG>(digest.size()), 0))) {
+    BCryptDestroyHash(hash);
+    BCryptCloseAlgorithmProvider(algorithm, 0);
+    return {};
+  }
+
+  BCryptDestroyHash(hash);
+  BCryptCloseAlgorithmProvider(algorithm, 0);
+  return digest;
+#else
+  return {};
+#endif
 }
 
 bool constant_time_equals(const std::string& a, const std::string& b) {
@@ -87,6 +148,16 @@ std::string AuthService::generate_hex_random(std::size_t byte_count) {
   // Input: byte_count is how many random bytes to produce.
   // Output: Returns a hex string of length byte_count times two.
   std::vector<unsigned char> bytes(byte_count);
+#if defined(_WIN32)
+  if (BCRYPT_SUCCESS(BCryptGenRandom(
+          nullptr,
+          bytes.data(),
+          static_cast<ULONG>(byte_count),
+          BCRYPT_USE_SYSTEM_PREFERRED_RNG))) {
+    return to_hex(bytes);
+  }
+#endif
+
   std::ifstream random_stream("/dev/urandom", std::ios::binary);
   if (random_stream.good()) {
     random_stream.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(byte_count));

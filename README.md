@@ -1,7 +1,7 @@
 # Private Notes Web App with C plus plus Backend
 
 <!-- Purpose: This document explains the private notes application and works as a simple reference for building, running, and understanding the project. -->
-<!-- Input: A reader uses a macOS machine, a terminal, and the listed build tools. -->
+<!-- Input: A reader uses a Windows, macOS, or Linux machine, a terminal, and the listed build tools. -->
 <!-- Output: By the end, a reader can build the server, start the app, register an account, save notes, and understand the main API flow. -->
 
 The project shows a full stack application with a C plus plus backend API, SQLite storage, and a small HTML CSS JavaScript frontend.
@@ -12,7 +12,7 @@ The project shows a full stack application with a C plus plus backend API, SQLit
 - cpp-httplib for HTTP server and API routing
 - nlohmann json for JSON parsing and response formatting
 - SQLite3 for persistent data storage
-- CommonCrypto SHA256 for password hashing on macOS
+- CommonCrypto SHA256 on macOS and BCrypt SHA256 on Windows
 - HTML, CSS, and vanilla JavaScript for the web interface
 - CMake for cross platform build configuration
 
@@ -49,13 +49,22 @@ The interface stays simple and beginner friendly while still showing important b
 
 ## Requirements
 
+On Windows:
+- CMake 3.20 or newer
+- MinGW toolchain available on PATH (gcc, g++, mingw32-make)
+- Internet access for first build to download header dependencies
+
 On macOS:
 - CMake 3.20 or newer
 - A C plus plus compiler with C plus plus 17 support
-- SQLite development library
 - Internet access for first build to download header dependencies
 
-A reader can install build tools with Homebrew if needed:
+SQLite development libraries are not required anymore because SQLite is downloaded and built automatically during CMake configure.
+
+Windows note:
+- If CMake defaults to NMake and configure fails, use the MinGW generator explicitly as shown below.
+
+macOS example install command:
 
 ```bash
 brew install cmake
@@ -63,7 +72,15 @@ brew install cmake
 
 ## Build and run
 
-From the project root:
+Windows (PowerShell) from the project root:
+
+```powershell
+cmake -S . -B build -G "MinGW Makefiles"
+cmake --build build -j 4
+.\build\private_data_app.exe
+```
+
+macOS or Linux from the project root:
 
 ```bash
 cmake -S . -B build
