@@ -10,14 +10,14 @@ include(FetchContent)
 # I use FetchContent so this project can build without manually downloading headers.
 FetchContent_Declare(
   cpp_httplib
-  GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-  GIT_TAG v0.17.3
+  URL https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.17.3.tar.gz
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
 FetchContent_Declare(
   nlohmann_json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.11.3
+  URL https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
 FetchContent_Declare(
@@ -28,11 +28,25 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(cpp_httplib nlohmann_json sqlite3_amalgamation)
 
+set(SQLITE3_AMALGAMATION_DIR
+  ${sqlite3_amalgamation_SOURCE_DIR}/sqlite-amalgamation-3460000
+)
+
 add_library(sqlite3 STATIC
-  ${sqlite3_amalgamation_SOURCE_DIR}/sqlite3.c
+  ${SQLITE3_AMALGAMATION_DIR}/sqlite3.c
 )
 target_include_directories(sqlite3 PUBLIC
-  ${sqlite3_amalgamation_SOURCE_DIR}
+  ${SQLITE3_AMALGAMATION_DIR}
+)
+
+add_library(httplib_header INTERFACE)
+target_include_directories(httplib_header INTERFACE
+  ${cpp_httplib_SOURCE_DIR}/cpp-httplib-0.17.3
+)
+
+add_library(nlohmann_json_header INTERFACE)
+target_include_directories(nlohmann_json_header INTERFACE
+  ${nlohmann_json_SOURCE_DIR}/json-3.11.3/include
 )
 
 add_executable(private_data_app
@@ -46,8 +60,8 @@ target_include_directories(private_data_app PRIVATE src)
 target_link_libraries(private_data_app
   PRIVATE
     sqlite3
-    httplib::httplib
-    nlohmann_json::nlohmann_json
+    httplib_header
+    nlohmann_json_header
 )
 
 if(APPLE)

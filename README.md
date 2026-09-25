@@ -75,6 +75,7 @@ brew install cmake
 Windows (PowerShell) from the project root:
 
 ```powershell
+rm -r -Force build
 cmake -S . -B build -G "MinGW Makefiles"
 cmake --build build -j 4
 .\build\private_data_app.exe
@@ -83,10 +84,13 @@ cmake --build build -j 4
 macOS or Linux from the project root:
 
 ```bash
+rm -rf build
 cmake -S . -B build
 cmake --build build
 ./build/private_data_app
 ```
+
+If you move or re-download the project into a different directory, delete the old `build` folder first before running CMake. CMake caches paths and a stale `build` directory created elsewhere can cause the path mismatch errors shown earlier.
 
 When the server starts, it listens at:
 - http://127.0.0.1:8080
