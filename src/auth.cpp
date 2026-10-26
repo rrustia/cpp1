@@ -5,6 +5,8 @@
 #elif defined(_WIN32)
 #include <windows.h>
 #include <bcrypt.h>
+#elif defined(__linux__)
+#include <openssl/sha.h>
 #endif
 
 #include <chrono>
@@ -89,6 +91,14 @@ std::vector<unsigned char> sha256_bytes(const std::string& input) {
 
   BCryptDestroyHash(hash);
   BCryptCloseAlgorithmProvider(algorithm, 0);
+  return digest;
+#elif defined(__linux__)
+  std::vector<unsigned char> digest(SHA256_DIGEST_LENGTH);
+  if (SHA256(reinterpret_cast<const unsigned char*>(input.data()),
+             input.size(),
+             digest.data()) == nullptr) {
+    return {};
+  }
   return digest;
 #else
   return {};
@@ -182,11 +192,17 @@ std::string AuthService::hash_password(const std::string& password, const std::s
   // Output: Returns the final hash as a hex string.
   std::string state = salt_hex + password;
   std::vector<unsigned char> digest = sha256_bytes(state);
+  if (digest.size() != 32) {
+    return {};
+  }
 
   const int rounds = 100000;
   for (int i = 0; i < rounds; ++i) {
     const std::string round_input = to_hex(digest) + salt_hex;
     digest = sha256_bytes(round_input);
+    if (digest.size() != 32) {
+      return {};
+    }
   }
 
   return to_hex(digest);
@@ -206,6 +222,10 @@ bool AuthService::register_user(Database& db,
 
   const std::string salt_hex = generate_hex_random(16);
   const std::string hash_hex = hash_password(password, salt_hex);
+  if (hash_hex.empty()) {
+    error_message = "Password hashing failed";
+    return false;
+  }
 
   return db.create_user(username, salt_hex, hash_hex, error_message);
 }
@@ -227,6 +247,10 @@ bool AuthService::login(Database& db,
   }
 
   const std::string computed_hash_hex = hash_password(password, salt_hex);
+  if (computed_hash_hex.empty() || expected_hash_hex.empty()) {
+    error_message = "Password hashing failed";
+    return false;
+  }
   if (!constant_time_equals(computed_hash_hex, expected_hash_hex)) {
     error_message = "Invalid username or password";
     return false;

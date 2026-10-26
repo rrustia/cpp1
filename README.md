@@ -35,6 +35,7 @@ Once the server is running, open <http://127.0.0.1:8080> in your browser, regist
 - nlohmann json for JSON parsing and response formatting
 - SQLite3 for persistent data storage
 - CommonCrypto SHA256 on macOS and BCrypt SHA256 on Windows
+- OpenSSL SHA256 on Linux
 - HTML, CSS, and vanilla JavaScript for the web interface
 - CMake for cross platform build configuration
 
@@ -79,6 +80,12 @@ On Windows:
 On macOS:
 - CMake 3.20 or newer
 - A C plus plus compiler with C plus plus 17 support
+- Internet access for first build to download header dependencies
+
+On Linux:
+- CMake 3.20 or newer
+- A C plus plus compiler with C plus plus 17 support
+- OpenSSL development files
 - Internet access for first build to download header dependencies
 
 SQLite development libraries are not required anymore because SQLite is downloaded and built automatically during CMake configure.

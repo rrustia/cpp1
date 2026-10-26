@@ -26,6 +26,10 @@ bool parse_json_body(const httplib::Request& req, json& body, std::string& error
     // Input: req is the incoming request, body is filled with the parsed result. error_message is filled on failure.
     // Output: Returns true if the body was valid JSON.
     body = json::parse(req.body);
+    if (!body.is_object()) {
+      error_message = "JSON body must be an object";
+      return false;
+    }
     return true;
   } catch (const std::exception& ex) {
     error_message = std::string("Invalid JSON: ") + ex.what();
@@ -75,8 +79,9 @@ int main() {
     // Input: JSON body with "username" and "password" fields.
     // Output: 201 with a success message, or 400 with an error message.
     json body;
-    if (!parse_json_body(req, body, error)) {
-      json_response(res, 400, {{"error", error}});
+    std::string parse_error;
+    if (!parse_json_body(req, body, parse_error)) {
+      json_response(res, 400, {{"error", parse_error}});
       return;
     }
 
@@ -97,8 +102,9 @@ int main() {
     // Input: JSON body with "username" and "password" fields.
     // Output: 200 with a token on success, or 401 with an error message.
     json body;
-    if (!parse_json_body(req, body, error)) {
-      json_response(res, 400, {{"error", error}});
+    std::string parse_error;
+    if (!parse_json_body(req, body, parse_error)) {
+      json_response(res, 400, {{"error", parse_error}});
       return;
     }
 
@@ -182,8 +188,9 @@ int main() {
     }
 
     json body;
-    if (!parse_json_body(req, body, error)) {
-      json_response(res, 400, {{"error", error}});
+    std::string parse_error;
+    if (!parse_json_body(req, body, parse_error)) {
+      json_response(res, 400, {{"error", parse_error}});
       return;
     }
 

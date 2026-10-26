@@ -64,6 +64,11 @@ target_link_libraries(private_data_app
     nlohmann_json_header
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_package(OpenSSL REQUIRED COMPONENTS Crypto)
+  target_link_libraries(private_data_app PRIVATE OpenSSL::Crypto)
+endif()
+
 if(APPLE)
   # I link Security because I rely on CommonCrypto for SHA256 hashing on macOS.
   target_link_libraries(private_data_app PRIVATE "-framework Security")
