@@ -6,6 +6,28 @@
 
 The project shows a full stack application with a C plus plus backend API, SQLite storage, and a small HTML CSS JavaScript frontend.
 
+## Quick setup and run
+
+You need CMake 3.20 or newer, a C++17 compiler, and internet access for CMake to download the project dependencies on the first configure. Run these commands from the project root.
+
+macOS or Linux:
+
+```bash
+cmake -S . -B build
+cmake --build build
+./build/private_data_app
+```
+
+Windows PowerShell with MinGW:
+
+```powershell
+cmake -S . -B build -G "MinGW Makefiles"
+cmake --build build -j 4
+.\build\private_data_app.exe
+```
+
+Once the server is running, open <http://127.0.0.1:8080> in your browser, register an account, and log in to create private notes. Stop the server with Ctrl+C.
+
 ## Technologies used
 
 - C plus plus 17 for backend application logic
